@@ -1,27 +1,25 @@
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 if (!process.env.GOOGLE_AI_API_KEY) {
-  throw new Error('Missing GOOGLE_AI_API_KEY environment variable')
+	throw new Error("(/breakdown):MISSING_GOOGLE_AI_API_KEY");
 }
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY)
+const gemini = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY);
 
 export async function POST(req: Request) {
-  try {
-    console.log('Google AI Key exists:', !!process.env.GOOGLE_AI_API_KEY)
-    
-    const { idea, depth = 1, focusArea = null } = await req.json()
-    if (!idea || typeof idea !== 'string') {
-      return Response.json({ error: 'Invalid input' }, { status: 400 })
-    }
+	try {
+		const { idea, depth = 1, focusArea = null } = await req.json();
+		if (!idea || typeof idea !== "string") {
+			return Response.json({ error: "invalid input" }, { status: 400 });
+		}
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' })
+		const model = gemini.getGenerativeModel({ model: "gemini-pro" });
 
-    const prompt = `
+		const prompt = `
       Provide a comprehensive breakdown for the following project idea: "${idea}"
       
       Depth level: ${depth}
-      ${focusArea ? `Focus area: ${focusArea}` : ''}
+      ${focusArea ? `Focus area: ${focusArea}` : ""}
 
       Format your response as a valid JSON object with this structure:
       {
@@ -83,53 +81,56 @@ export async function POST(req: Request) {
       9. If a focus area is provided, provide more details for that specific area.
       10. Do not use markdown formatting or special characters in any text fields.
       11. Response must be ONLY the JSON object, no other text.
-    `
+    `;
 
-    const result = await model.generateContent(prompt)
-    const response = await result.response
-    const text = response.text()
-    
-    try {
-      const jsonMatch = text.match(/\{[\s\S]*\}/)
-      if (!jsonMatch) {
-        throw new Error('No JSON found in response')
-      }
-      
-      const jsonStr = jsonMatch[0]
-      const jsonResponse = JSON.parse(jsonStr)
+		const result = await model.generateContent(prompt);
+		const response = await result.response;
+		const text = response.text();
 
-      // Basic validation of the response structure
-      if (!jsonResponse.overview || !jsonResponse.priorities || !jsonResponse.systemArchitecture || !jsonResponse.developmentSteps) {
-        throw new Error('Invalid response structure')
-      }
+		try {
+			const jsonMatch = text.match(/\{[\s\S]*\}/);
+			if (!jsonMatch) {
+				throw new Error("No JSON found in response");
+			}
 
-      // Ensure all priority levels exist
-      const priorities = ['p0', 'p1', 'p2'];
-      priorities.forEach(priority => {
-        if (!jsonResponse.priorities[priority]) {
-          jsonResponse.priorities[priority] = {
-            frontend: { components: [] },
-            backend: { services: [], dataModel: [] }
-          };
-        }
-      });
+			const jsonStr = jsonMatch[0];
+			const jsonResponse = JSON.parse(jsonStr);
 
-      return Response.json(jsonResponse)
-    } catch (parseError) {
-      console.error('Parse error:', parseError)
-      console.error('Raw response:', text)
-      
-      return Response.json(
-        { error: 'Failed to parse the AI response. Please try again.' },
-        { status: 500 }
-      )
-    }
-  } catch (error) {
-    console.error('API Error:', error)
-    return Response.json(
-      { error: 'Failed to process the idea. Please try again.' },
-      { status: 500 }
-    )
-  }
+			// Basic validation of the response structure
+			if (
+				!jsonResponse.overview ||
+				!jsonResponse.priorities ||
+				!jsonResponse.systemArchitecture ||
+				!jsonResponse.developmentSteps
+			) {
+				throw new Error("Invalid response structure");
+			}
+
+			// ensure all priority levels exist
+			const priorities = ["p0", "p1", "p2"];
+			for (const priority of priorities) {
+				if (!jsonResponse.priorities[priority]) {
+					jsonResponse.priorities[priority] = {
+						frontend: { components: [] },
+						backend: { services: [], dataModel: [] },
+					};
+				}
+			}
+
+			return Response.json(jsonResponse);
+		} catch (parseError) {
+			// parsing error indicates malformed response
+			console.error("(/breakdown):parse error:", parseError);
+			console.error("(/breakdown):raw response:", text);
+
+			return Response.json(
+				{ error: "failed to parse model response" },
+				{ status: 422 },
+			);
+		}
+	} catch (error) {
+		// general server error
+		console.error("(/breakdown):ERROR", error);
+		return Response.json({ error: "internal server error" }, { status: 500 });
+	}
 }
-
