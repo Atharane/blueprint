@@ -15,7 +15,7 @@ export async function POST(req: Request) {
       return Response.json({ error: 'Invalid input' }, { status: 400 })
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' })
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' })
 
     const prompt = `
       Provide a comprehensive breakdown for the following project idea: "${idea}"
