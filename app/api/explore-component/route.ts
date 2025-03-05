@@ -13,7 +13,7 @@ export async function POST(req: Request) {
       return Response.json({ error: 'Invalid input: Missing required fields' }, { status: 400 })
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' })
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' })
 
     const prompt = `
       Provide a detailed breakdown for the ${componentName} (${type}) component with ${priority.toUpperCase()} priority.
