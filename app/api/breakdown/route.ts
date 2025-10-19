@@ -13,8 +13,9 @@ export async function POST(req: Request) {
 			return Response.json({ error: "invalid input" }, { status: 400 });
 		}
 
-		const model = gemini.getGenerativeModel({ model: "gemini-pro" });
+		const model = gemini.getGenerativeModel({ model: "gemini-2.5-flash" });
 
+    // todo: use structured output
 		const prompt = `
       Provide a comprehensive breakdown for the following project idea: "${idea}"
       
@@ -88,15 +89,15 @@ export async function POST(req: Request) {
 		const text = response.text();
 
 		try {
-			const jsonMatch = text.match(/\{[\s\S]*\}/);
-			if (!jsonMatch) {
-				throw new Error("No JSON found in response");
+			const output = text.match(/\{[\s\S]*\}/);
+			if (!output) {
+				throw new Error("malformed model output");
 			}
 
-			const jsonStr = jsonMatch[0];
+			const jsonStr = output[0];
 			const jsonResponse = JSON.parse(jsonStr);
 
-			// Basic validation of the response structure
+			// basic validation of the response structure
 			if (
 				!jsonResponse.overview ||
 				!jsonResponse.priorities ||
